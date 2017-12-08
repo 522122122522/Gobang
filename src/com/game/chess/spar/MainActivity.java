@@ -140,6 +140,7 @@ public class MainActivity extends Activity implements OnItemClickListener,
 		aiXY = null;
 		repeatXY = null;
 		attakSet.clear();
+		repeatData.clear();
 	}
 
 	/**
@@ -572,6 +573,9 @@ public class MainActivity extends Activity implements OnItemClickListener,
         int x = xy[0];
         int y = xy[1] - 1;
         int continuousCount = 1;
+        int blankCount = 0;
+        int blankX = -1;
+        int blankY = -1;
 
         while(y >= 0){
             if(chessBoard[x][y] == chessBoard[xy[0]][xy[1]]){
@@ -581,16 +585,30 @@ public class MainActivity extends Activity implements OnItemClickListener,
                 //左边已经遇到己方棋子
                 break;
             }else if(chessBoard[x][y] == 0){
-                //左边遇到空棋子
-                leftBlank = true;
-                map.put("LEFT", xy2Position(new int[]{x, y}));
-                break;
+            	if (blankCount == 1 || y==0) {
+            		if (y==0) {
+            			blankX = x;
+    					blankY = y;
+					}
+	                //左边遇到空棋子
+	                leftBlank = true;
+	                map.put("LEFT", xy2Position(new int[]{blankX, blankY}));
+	                break;
+				}else {
+					blankX = x;
+					blankY = y;
+	                y--;
+				}
+            	blankCount++;
             }
         }
 
         //右
         x = xy[0];
         y = xy[1] + 1;
+        blankCount = 0;
+        blankX = -1;
+        blankY = -1;
 
         while(y < chessBoard[x].length){
             if(chessBoard[x][y] == chessBoard[xy[0]][xy[1]]){
@@ -600,10 +618,21 @@ public class MainActivity extends Activity implements OnItemClickListener,
                 //左边已经遇到己方棋子
                 break;
             }else if(chessBoard[x][y] == 0){
-                //左边遇到空棋子
-                rightBlank = true;
-                map.put("RIGHT", xy2Position(new int[]{x, y}));
-                break;
+                if (blankCount == 1 || y == chessBoard[x].length-1) {
+                	if (y == chessBoard[x].length-1) {
+            			blankX = x;
+    					blankY = y;
+					}
+                    //左边遇到空棋子
+                    rightBlank = true;
+                    map.put("RIGHT", xy2Position(new int[]{blankX, blankY}));
+                    break;
+				}else {
+					blankX = x;
+					blankY = y;
+					y++;
+				}
+                blankCount++;
             }
         }
 
@@ -633,6 +662,9 @@ public class MainActivity extends Activity implements OnItemClickListener,
         x = xy[0] - 1;
         y = xy[1];
         continuousCount = 1;
+        blankCount = 0;
+        blankX = -1;
+        blankY = -1;
 
         while(x >= 0){
             if(chessBoard[x][y] == chessBoard[xy[0]][xy[1]]){
@@ -642,16 +674,30 @@ public class MainActivity extends Activity implements OnItemClickListener,
                 //上边已经遇到己方棋子
                 break;
             }else if(chessBoard[x][y] == 0){
-                //上边遇到空棋子
-                topBlank = true;
-                map.put("TOP", xy2Position(new int[]{x, y}));
-                break;
+            	if (blankCount == 1 || x == 0) {
+                	if (x == 0) {
+            			blankX = x;
+    					blankY = y;
+					}
+                    //上边遇到空棋子
+                    topBlank = true;
+                    map.put("TOP", xy2Position(new int[]{blankX, blankY}));
+                    break;
+				}else {
+			        blankX = x;
+			        blankY = y;
+			        x--;
+				}
+		        blankCount ++;
             }
         }
 
         //下
         x = xy[0] + 1;
         y = xy[1];
+        blankCount = 0;
+        blankX = -1;
+        blankY = -1;
 
         while(x < chessBoard.length){
             if(chessBoard[x][y] == chessBoard[xy[0]][xy[1]]){
@@ -661,10 +707,21 @@ public class MainActivity extends Activity implements OnItemClickListener,
                 //下边已经遇到己方棋子
                 break;
             }else if(chessBoard[x][y] == 0){
-                //下边遇到空棋子
-                bottomBlank = true;
-                map.put("BOTTOM", xy2Position(new int[]{x, y}));
-                break;
+            	if (blankCount == 1 || x == chessBoard.length-1) {
+                	if (x == chessBoard.length-1) {
+            			blankX = x;
+    					blankY = y;
+					}
+            		//下边遇到空棋子
+                    bottomBlank = true;
+                    map.put("BOTTOM", xy2Position(new int[]{blankX, blankY}));
+                    break;
+				}else {
+			        blankX = x;
+			        blankY = y;
+			        x++;
+				}
+		        blankCount ++;
             }
         }
 
@@ -695,6 +752,9 @@ public class MainActivity extends Activity implements OnItemClickListener,
         x = xy[0] - 1;
         y = xy[1] - 1;
         continuousCount = 1;
+        blankCount = 0;
+        blankX = -1;
+        blankY = -1;
 
         while(x >= 0 && y >= 0){
             if(chessBoard[x][y] == chessBoard[xy[0]][xy[1]]){
@@ -705,16 +765,31 @@ public class MainActivity extends Activity implements OnItemClickListener,
                 //左上遇到己方棋子
                 break;
             }else if(chessBoard[x][y] == 0){
-                //左上遇到空棋子
-                leftTopBlank = true;
-                map.put("LEFTTOP", xy2Position(new int[]{x, y}));
-                break;
+            	if (blankCount == 1 || x==0 || y==0) {
+                	if (x==0 || y==0) {
+            			blankX = x;
+    					blankY = y;
+					}
+                    //左上遇到空棋子
+                    leftTopBlank = true;
+                    map.put("LEFTTOP", xy2Position(new int[]{blankX, blankY}));
+                    break;
+				}else {
+			        blankX = x;
+			        blankY = y;
+			        x--;
+	                y--;
+				}
+		        blankCount ++;
             }
         }
 
         //右下
         x = xy[0] + 1;
         y = xy[1] + 1;
+        blankCount = 0;
+        blankX = -1;
+        blankY = -1;
 
         while(x < chessBoard.length && y < chessBoard[x].length){
             if(chessBoard[x][y] == chessBoard[xy[0]][xy[1]]){
@@ -725,10 +800,22 @@ public class MainActivity extends Activity implements OnItemClickListener,
                 //右下遇到己方棋子
                 break;
             }else if(chessBoard[x][y] == 0){
-                //右下遇到空棋子
-                rightBottomBlank = true;
-                map.put("RIGHTBOTTOM", xy2Position(new int[]{x, y}));
-                break;
+            	if (blankCount == 1 || x == chessBoard.length-1 || y == chessBoard[x].length-1) {
+                	if (x == chessBoard.length-1 || y == chessBoard[x].length-1) {
+            			blankX = x;
+    					blankY = y;
+					}
+                    //右下遇到空棋子
+                    rightBottomBlank = true;
+                    map.put("RIGHTBOTTOM", xy2Position(new int[]{blankX, blankY}));
+                    break;
+				}else {
+			        blankX = x;
+			        blankY = y;
+			        x++;
+	                y++;
+				}
+		        blankCount ++;
             }
         }
 
@@ -758,6 +845,9 @@ public class MainActivity extends Activity implements OnItemClickListener,
         x = xy[0] + 1;
         y = xy[1] - 1;
         continuousCount = 1;
+        blankCount = 0;
+        blankX = -1;
+        blankY = -1;
 
         while(x <chessBoard.length && y >= 0){
             if(chessBoard[x][y] == chessBoard[xy[0]][xy[1]]){
@@ -768,16 +858,31 @@ public class MainActivity extends Activity implements OnItemClickListener,
                 //左下遇到己方棋子
                 break;
             }else if(chessBoard[x][y] == 0){
-                //左下遇到空棋子
-                leftBottomBlank = true;
-                map.put("LEFTBOTTOM", xy2Position(new int[]{x, y}));
-                break;
+            	if (blankCount == 1 || x == chessBoard.length-1 || y == 0) {
+            		if (x == chessBoard.length-1 || y == 0) {
+            			blankX = x;
+    					blankY = y;
+					}
+                    //左下遇到空棋子
+                    leftBottomBlank = true;
+                    map.put("LEFTBOTTOM", xy2Position(new int[]{blankX, blankY}));
+                    break;
+				}else {
+			        blankX = x;
+			        blankY = y;
+			        x++;
+	                y--;
+				}
+		        blankCount ++;
             }
         }
 
         //右上
         x = xy[0] - 1;
         y = xy[1] + 1;
+        blankCount = 0;
+        blankX = -1;
+        blankY = -1;
 
         while(x >= 0 && y < chessBoard[x].length){
             if(chessBoard[x][y] == chessBoard[xy[0]][xy[1]]){
@@ -788,10 +893,22 @@ public class MainActivity extends Activity implements OnItemClickListener,
                 //右上遇到己方棋子
                 break;
             }else if(chessBoard[x][y] == 0){
-                //右上遇到空棋子
-                rightTopBlank = true;
-                map.put("RIGHTTOP", xy2Position(new int[]{x, y}));
-                break;
+            	if (blankCount == 1 || x == 0 || y == chessBoard[x].length-1) {
+            		if (x == 0 || y == chessBoard[x].length-1) {
+            			blankX = x;
+    					blankY = y;
+					}
+                    //右上遇到空棋子
+                    rightTopBlank = true;
+                    map.put("RIGHTTOP", xy2Position(new int[]{blankX, blankY}));
+                    break;
+				}else {
+			        blankX = x;
+			        blankY = y;
+			        x--;
+	                y++;
+				}
+		        blankCount ++;
             }
         }
 
