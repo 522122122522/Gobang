@@ -51,12 +51,19 @@
             android:verticalSpacing="0px" />=
 
             <RelativeLayout
-                android:layout_width="wrap_content"
+                android:layout_marginBottom="20dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
             	android:layout_alignParentBottom="true">
+            	
+                <ImageView 
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:layout_centerInParent="true"
+                    android:background="@drawable/button_select"/>
 
-                <Button
+                <!-- <Button
                     android:id="@+id/button_restart"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -84,7 +91,7 @@
                     android:text="悔棋"
                     android:layout_centerHorizontal="true"
                     android:textColor="#2b2b2b"
-                    android:textSize="20sp" />
+                    android:textSize="20sp" /> -->
             </RelativeLayout>
     </RelativeLayout>
 
