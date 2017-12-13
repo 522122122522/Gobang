@@ -18,7 +18,6 @@ import com.game.chess.model.ViewHolder;
 import android.R.integer;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Dialog;
 import android.app.AlertDialog.Builder;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -28,6 +27,7 @@ import android.os.Message;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.widget.AdapterView;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -44,7 +44,7 @@ import android.widget.GridView;
  * 
  */
 public class MainActivity extends Activity implements OnItemClickListener,
-		CompoundButton.OnCheckedChangeListener {
+		CompoundButton.OnCheckedChangeListener,OnClickListener{
 	/** 上下文对象 */
 	private Context mContext = MainActivity.this;
 	/** adapter */
@@ -64,9 +64,9 @@ public class MainActivity extends Activity implements OnItemClickListener,
 	private boolean whoMove = true;
 
 	// 记录已经刚刚棋子的坐标
-	private int[] repeatXY = null;
+	private int[] repeatBlackXY = null;
 	// 记录已经机器人刚刚棋子的坐标
-	private int[] aiXY = null;
+	private int[] repeatWhiteXY = null;
 	// 记录机器人可选最优落子点集合
 	TreeSet<AIPosition> attakSet = new TreeSet<AIPosition>();
 
@@ -137,8 +137,8 @@ public class MainActivity extends Activity implements OnItemClickListener,
 		isRepeat = false;
 		isRepeatEnd = true;
 		whoMove = true;
-		aiXY = null;
-		repeatXY = null;
+		repeatWhiteXY = null;
+		repeatBlackXY = null;
 		attakSet.clear();
 		repeatData.clear();
 	}
@@ -147,19 +147,19 @@ public class MainActivity extends Activity implements OnItemClickListener,
 	 * 悔棋操作
 	 * */
 	public void regret(View view) {
-		if (isAIOpen && whoMove == true || !isAIOpen) {
-			Toast toast = Toast.makeText(mContext, "机器人表示不需要你给它悔棋,人家下的挺好的~", Toast.LENGTH_SHORT);
-			toast.setGravity(Gravity.CENTER, 0, 0);
-			toast.show();
-		}else if (isRepeat) {
+		if (isRepeat) {
 			Toast toast = Toast.makeText(mContext, "游戏完结啦，重新开始吧~", Toast.LENGTH_SHORT);
 			toast.setGravity(Gravity.CENTER, 0, 0);
 			toast.show();
-		}else if (repeatXY == null) {
+		}else if (repeatBlackXY == null && whoMove) {
 			Toast toast = Toast.makeText(mContext, "您还没下棋呐~", Toast.LENGTH_SHORT);
 			toast.setGravity(Gravity.CENTER, 0, 0);
 			toast.show();
-		} else {
+		}else if (repeatWhiteXY == null && !whoMove && !isAIOpen) {
+			Toast toast = Toast.makeText(mContext, "您还没下棋呐~", Toast.LENGTH_SHORT);
+			toast.setGravity(Gravity.CENTER, 0, 0);
+			toast.show();
+		}else {
 			Builder builder = new Builder(this, AlertDialog.THEME_HOLO_LIGHT);
 			builder.setTitle("提示");
 			builder.setMessage("确认悔棋？");
@@ -168,20 +168,39 @@ public class MainActivity extends Activity implements OnItemClickListener,
 
 						@Override
 						public void onClick(DialogInterface dialog, int which) {
-							
-								chessBoard[repeatXY[0]][repeatXY[1]] = 0;
-								repeatData.remove(repeatXY);
-								int pos = xy2Position(repeatXY);
-								Chess chess = mData.get(pos);
-								chess.who = 0;
-								whoMove = !whoMove;
-								if (whoMove) {
-									textview_notify.setText("请黑方落子");
-								} else {
-									textview_notify.setText("请白方落子");
+							//机器人对战模式悔棋移除两颗棋子
+							if (isAIOpen && whoMove) {
+								if (repeatWhiteXY != null) {
+									chessBoard[repeatWhiteXY[0]][repeatWhiteXY[1]] = 0;
+									repeatData.remove(repeatWhiteXY);
+									int pos = xy2Position(repeatWhiteXY);
+									mData.get(pos).who = 0;
+									chessBoard[repeatBlackXY[0]][repeatBlackXY[1]] = 0;
+									repeatData.remove(repeatBlackXY);
+									pos = xy2Position(repeatBlackXY);
+									mData.get(pos).who = 0;
 								}
-								adapter.notifyDataSetChanged();
+							}else if (whoMove) {
+								chessBoard[repeatWhiteXY[0]][repeatWhiteXY[1]] = 0;
+								repeatData.remove(repeatWhiteXY);
+								int pos = xy2Position(repeatWhiteXY);
+								mData.get(pos).who = 0;
+							}else {
+								chessBoard[repeatBlackXY[0]][repeatBlackXY[1]] = 0;
+								repeatData.remove(repeatBlackXY);
+								int pos = xy2Position(repeatBlackXY);
+								mData.get(pos).who = 0;
 							}
+							
+							whoMove = !whoMove;
+							if (whoMove || isAIOpen) {
+								textview_notify.setText("请黑方落子");
+								whoMove = true;
+							} else {
+								textview_notify.setText("请白方落子");
+							}
+							adapter.notifyDataSetChanged();
+						}
 					});
 			builder.setNegativeButton("取消",
 					new DialogInterface.OnClickListener() {
@@ -238,6 +257,9 @@ public class MainActivity extends Activity implements OnItemClickListener,
 	private void initEvent() {
 		chessGrid.setOnItemClickListener(this);
 		checkboxAI.setOnCheckedChangeListener(this);
+		findViewById(R.id.id_regret).setOnClickListener(this);
+		findViewById(R.id.id_restart).setOnClickListener(this);
+		findViewById(R.id.id_repeat).setOnClickListener(this);
 	}
 
 	/**
@@ -378,10 +400,12 @@ public class MainActivity extends Activity implements OnItemClickListener,
 	public void onItemClick(AdapterView<?> parent, View view, int pos, long id) {
 		// TODO Auto-generated method stub
 		// TODO Auto-generated method stub
-		int[] clickXY = repeatXY = postion2XY(pos);
-		if (isAIOpen && !whoMove) {
-			aiXY = clickXY;
-		}
+		int[] clickXY = null;
+		if (whoMove) {
+			clickXY = repeatBlackXY = postion2XY(pos);
+		}else {
+			clickXY = repeatWhiteXY = postion2XY(pos);
+		} 
 		if (isValid(mData.get(pos))) {
 
 			if (whoMove) {
@@ -404,7 +428,6 @@ public class MainActivity extends Activity implements OnItemClickListener,
 			}
 			adapter.notifyDataSetChanged();
 			if (!isContinue(clickXY)) {
-				chessGrid.setEnabled(false);
 				String winner = (whoMove == true ? "白方获胜" : "黑方获胜");
 				@SuppressWarnings("deprecation")
 				Builder builder = new AlertDialog.Builder(mContext,
@@ -480,10 +503,8 @@ public class MainActivity extends Activity implements OnItemClickListener,
         //优先防守，进攻机会更好选进攻
         resultTreeSet.addAll(treeSet);
 
-        if (aiXY != null) {
-        	Log.e("attakSet", attakSet.toString());
-        	Log.e("attakSet11111", doAIConsider(1, aiXY).toString());
-            attakSet.addAll(doAIConsider(1, aiXY));
+        if (repeatWhiteXY != null && isAIOpen) {
+            attakSet.addAll(doAIConsider(1, repeatWhiteXY));
             TreeSet<AIPosition> set = new TreeSet<AIPosition>();
             
             for(AIPosition aiPosition : attakSet){
@@ -493,8 +514,6 @@ public class MainActivity extends Activity implements OnItemClickListener,
 				}
 			}
             attakSet = set;
-        	Log.e("attakSet222222", attakSet.toString());
-        	Log.e("resultTreeSet", resultTreeSet.toString());
             resultTreeSet.addAll(attakSet);
 		}
 
@@ -948,4 +967,25 @@ public class MainActivity extends Activity implements OnItemClickListener,
 		// TODO Auto-generated method stub
 		isAIOpen = isChecked;
 	}
+
+	/* (non-Javadoc)
+	 * @see android.view.View.OnClickListener#onClick(android.view.View)
+	 */
+	@Override
+	public void onClick(View v) {
+		// TODO Auto-generated method stub
+		final int rid = v.getId();
+		switch (rid) {
+		case R.id.id_regret:
+			regret(v);
+			break;
+		case R.id.id_restart:
+			restart(v);
+			break;
+		case R.id.id_repeat:
+			repeat(v);
+			break;
+		}
+	}
+
 }

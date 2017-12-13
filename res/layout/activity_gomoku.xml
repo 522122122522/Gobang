@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:circle="http://schemas.android.com/apk/res/com.game.chess"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -33,15 +34,17 @@
             android:textSize="30dp" />
     </RelativeLayout>
 
-    <RelativeLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:orientation="vertical"
         android:layout_below="@id/relativelayout_title">
 
         <GridView
             android:id="@+id/gridview"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
             android:background="#00000000"
             android:cacheColorHint="#00000000"
             android:horizontalSpacing="0px"
@@ -51,49 +54,52 @@
             android:verticalSpacing="0px" />=
 
             <RelativeLayout
-                android:layout_marginBottom="20dp"
+                android:layout_marginBottom="2dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-            	android:layout_alignParentBottom="true">
+            	android:layout_gravity="bottom">
             	
-                <ImageView 
-                    android:layout_width="80dp"
-                    android:layout_height="80dp"
-                    android:layout_centerInParent="true"
-                    android:background="@drawable/button_select"/>
-
-                <!-- <Button
-                    android:id="@+id/button_restart"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:onClick="restart"
-                    android:text="重来"
+                <Button 
+                    android:id="@+id/id_regret"
+	                android:layout_height="42dp"
+	                android:layout_width="56dp"
+                    android:text="@string/regret"
+                    android:textColor="#999999"
+                    android:textSize="17sp"
+	                android:background="@drawable/button"
+                    android:layout_centerVertical="true"
                     android:layout_alignParentLeft="true"
-                    android:textColor="#2b2b2b"
-                    android:textSize="20sp" />
-
-                <Button
-                    android:id="@+id/button_repeat_display"
-                    android:layout_width="wrap_content"
+                    android:layout_marginLeft="10dp"/>
+                <LinearLayout 
                     android:layout_height="wrap_content"
-                    android:onClick="repeat"
-                    android:text="复盘"
-                    android:layout_alignParentRight="true"
-                    android:textColor="#2b2b2b"
-                    android:textSize="20sp" />
-
-                <Button
-                    android:id="@+id/button_regret_undo"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:onClick="regret"
-                    android:text="悔棋"
-                    android:layout_centerHorizontal="true"
-                    android:textColor="#2b2b2b"
-                    android:textSize="20sp" /> -->
+                    android:orientation="vertical"
+                    android:layout_marginRight="10dp"
+                    android:layout_alignParentRight="true">
+                    <Button 
+	                    android:id="@+id/id_repeat"
+		                android:layout_height="42dp"
+		                android:layout_width="56dp"
+	                    android:text="@string/review"
+	                    android:textColor="#999999"
+	                    android:textSize="17sp"
+	                    android:background="@drawable/button"
+	                    android:layout_marginLeft="10dp"
+	                    android:layout_marginBottom="5dp"/>
+                    
+                    <Button 
+	                    android:id="@+id/id_restart"
+		                android:layout_height="42dp"
+		                android:layout_width="56dp"
+	                    android:text="@string/restart"
+	                    android:textColor="#999999"
+	                    android:textSize="17sp"
+	                    android:background="@drawable/button"
+	                    android:layout_marginLeft="10dp"/>
+                    
+                </LinearLayout>
             </RelativeLayout>
-    </RelativeLayout>
+    </LinearLayout>
 
 
 </RelativeLayout>
