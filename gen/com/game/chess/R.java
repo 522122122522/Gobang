@@ -59,6 +59,8 @@ containing a value of this type.
         public static final int colorAccent=0x7f040002;
         public static final int colorPrimary=0x7f040000;
         public static final int colorPrimaryDark=0x7f040001;
+        public static final int red=0x7f040004;
+        public static final int white=0x7f040003;
     }
     public static final class dimen {
         /**  Default screen margins, per the Android Design guidelines. 
@@ -74,28 +76,38 @@ containing a value of this type.
         public static final int bottom=0x7f020004;
         public static final int bottom_left=0x7f020005;
         public static final int bottom_right=0x7f020006;
-        public static final int button_select=0x7f020007;
-        public static final int ic_launcher=0x7f020008;
-        public static final int left=0x7f020009;
-        public static final int left_white=0x7f02000a;
-        public static final int line=0x7f02000b;
-        public static final int right=0x7f02000c;
-        public static final int right_black=0x7f02000d;
-        public static final int timg=0x7f02000e;
-        public static final int top=0x7f02000f;
-        public static final int top_left=0x7f020010;
-        public static final int top_right=0x7f020011;
-        public static final int white=0x7f020012;
+        public static final int button=0x7f020007;
+        public static final int button_select=0x7f020008;
+        public static final int ic_launcher=0x7f020009;
+        public static final int left=0x7f02000a;
+        public static final int left_white=0x7f02000b;
+        public static final int line=0x7f02000c;
+        public static final int regret=0x7f02000d;
+        public static final int restart=0x7f02000e;
+        public static final int review=0x7f02000f;
+        public static final int right=0x7f020010;
+        public static final int right_black=0x7f020011;
+        public static final int select=0x7f020012;
+        public static final int timg=0x7f020013;
+        public static final int top=0x7f020014;
+        public static final int top_left=0x7f020015;
+        public static final int top_right=0x7f020016;
+        public static final int unselect=0x7f020017;
+        public static final int white=0x7f020018;
+        public static final int xml_select=0x7f020019;
     }
     public static final class id {
         public static final int East=0x7f070000;
         public static final int North=0x7f070001;
         public static final int South=0x7f070002;
         public static final int West=0x7f070003;
-        public static final int boardImageView=0x7f070008;
+        public static final int boardImageView=0x7f07000b;
         public static final int checkboxAI=0x7f070005;
-        public static final int chessImageView=0x7f070009;
+        public static final int chessImageView=0x7f07000c;
         public static final int gridview=0x7f070007;
+        public static final int id_regret=0x7f070008;
+        public static final int id_repeat=0x7f070009;
+        public static final int id_restart=0x7f07000a;
         public static final int relativelayout_title=0x7f070004;
         public static final int textview_notify=0x7f070006;
     }
@@ -105,6 +117,9 @@ containing a value of this type.
     }
     public static final class string {
         public static final int app_name=0x7f060000;
+        public static final int regret=0x7f060002;
+        public static final int restart=0x7f060001;
+        public static final int review=0x7f060003;
     }
     public static final class styleable {
         /** Attributes that can be used with a Circle.

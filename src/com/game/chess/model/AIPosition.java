@@ -8,15 +8,28 @@ public class AIPosition implements Comparable<AIPosition>{
     public float level;
     public int position = -1;
 
-    @Override
+    public AIPosition(float level, int position) {
+		super();
+		this.level = level;
+		this.position = position;
+	}
+    
+	public AIPosition() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+
+
+
+	@Override
     public int compareTo(AIPosition aiPosition) {
-        if(this.level > aiPosition.level){
+        if(this.level < aiPosition.level){
             return 1;
         }else if(this.level == aiPosition.level){
             //level优先级和position落子点全部一致，则这个位置重复
             if(this.position == aiPosition.position){
                 return 0;
-            }else if(this.position > aiPosition.position){
+            }else if(this.position < aiPosition.position){
                 return 1;
             }else{
                 return -1;

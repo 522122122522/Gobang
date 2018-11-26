@@ -5,6 +5,7 @@ package com.game.chess.spar;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
@@ -51,9 +52,10 @@ public class MainActivity extends Activity implements OnItemClickListener,
 	private CommonAdapter<Chess> adapter;
 	/** 数据源 */
 	private ArrayList<Chess> mData = new ArrayList<Chess>();
-	private ArrayList<int[]> repeatData = new ArrayList<int[]>();
+	private ArrayList<Integer> dataRepeat = new ArrayList<Integer>();
 	private boolean isRepeat = false;
 	private boolean isRepeatEnd = true;
+	private boolean isEnd = false;
 	private int[][] chessBoard = null;
 	private GridView chessGrid = null;
 	TextView textview_notify;
@@ -62,13 +64,10 @@ public class MainActivity extends Activity implements OnItemClickListener,
 	private boolean isAIOpen = true;
 	/** 默认黑棋先手 */
 	private boolean whoMove = true;
-
-	// 记录已经刚刚棋子的坐标
-	private int[] repeatBlackXY = null;
-	// 记录已经机器人刚刚棋子的坐标
-	private int[] repeatWhiteXY = null;
-	// 记录机器人可选最优落子点集合
-	TreeSet<AIPosition> attakSet = new TreeSet<AIPosition>();
+	
+	TreeSet<AIPosition> attakSet = new TreeSet<AIPosition>();//进攻一阵
+	TreeSet<AIPosition> defenSet = new TreeSet<AIPosition>();//一阵
+	private final String TAG = "MainActivity";
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -94,6 +93,7 @@ public class MainActivity extends Activity implements OnItemClickListener,
 	}
 
 	private void readData() {
+		attakSet.clear();
 		mData = new ArrayList<Chess>();
 		chessBoard = new int[16][14];
 		for (int i = 0; i < 224; i++) {
@@ -132,30 +132,28 @@ public class MainActivity extends Activity implements OnItemClickListener,
 
 	public void restart(View view) {
 		readData();
-		chessGrid.setEnabled(true);
 		adapter.notifyDataSetChanged();
 		isRepeat = false;
 		isRepeatEnd = true;
+		isEnd = false;
 		whoMove = true;
-		repeatWhiteXY = null;
-		repeatBlackXY = null;
 		attakSet.clear();
-		repeatData.clear();
+		defenSet.clear();
+		dataRepeat.clear();
 	}
 
 	/**
 	 * 悔棋操作
 	 * */
 	public void regret(View view) {
-		if (isRepeat) {
-			Toast toast = Toast.makeText(mContext, "游戏完结啦，重新开始吧~", Toast.LENGTH_SHORT);
+		if (isEnd) {
+			Toast toast = Toast.makeText(mContext, "游戏已经结束，重新开一局吧~", Toast.LENGTH_SHORT);
 			toast.setGravity(Gravity.CENTER, 0, 0);
 			toast.show();
-		}else if (repeatBlackXY == null && whoMove) {
-			Toast toast = Toast.makeText(mContext, "您还没下棋呐~", Toast.LENGTH_SHORT);
-			toast.setGravity(Gravity.CENTER, 0, 0);
-			toast.show();
-		}else if (repeatWhiteXY == null && !whoMove && !isAIOpen) {
+		}else if ((isAIOpen && dataRepeat.size() < 2)//人机
+				|| (!isAIOpen && whoMove && dataRepeat.size() == 0)//黑子
+				|| (!isAIOpen && !whoMove && dataRepeat.size() < 2)//白子
+				) {
 			Toast toast = Toast.makeText(mContext, "您还没下棋呐~", Toast.LENGTH_SHORT);
 			toast.setGravity(Gravity.CENTER, 0, 0);
 			toast.show();
@@ -164,44 +162,39 @@ public class MainActivity extends Activity implements OnItemClickListener,
 			builder.setTitle("提示");
 			builder.setMessage("确认悔棋？");
 			builder.setPositiveButton("确认",
-					new DialogInterface.OnClickListener() {
+				new DialogInterface.OnClickListener() {
 
-						@Override
-						public void onClick(DialogInterface dialog, int which) {
-							//机器人对战模式悔棋移除两颗棋子
-							if (isAIOpen && whoMove) {
-								if (repeatWhiteXY != null) {
-									chessBoard[repeatWhiteXY[0]][repeatWhiteXY[1]] = 0;
-									repeatData.remove(repeatWhiteXY);
-									int pos = xy2Position(repeatWhiteXY);
-									mData.get(pos).who = 0;
-									chessBoard[repeatBlackXY[0]][repeatBlackXY[1]] = 0;
-									repeatData.remove(repeatBlackXY);
-									pos = xy2Position(repeatBlackXY);
-									mData.get(pos).who = 0;
-								}
-							}else if (whoMove) {
-								chessBoard[repeatWhiteXY[0]][repeatWhiteXY[1]] = 0;
-								repeatData.remove(repeatWhiteXY);
-								int pos = xy2Position(repeatWhiteXY);
-								mData.get(pos).who = 0;
-							}else {
-								chessBoard[repeatBlackXY[0]][repeatBlackXY[1]] = 0;
-								repeatData.remove(repeatBlackXY);
-								int pos = xy2Position(repeatBlackXY);
-								mData.get(pos).who = 0;
-							}
-							
-							whoMove = !whoMove;
-							if (whoMove || isAIOpen) {
-								textview_notify.setText("请黑方落子");
-								whoMove = true;
-							} else {
-								textview_notify.setText("请白方落子");
-							}
-							adapter.notifyDataSetChanged();
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						
+						int pos = dataRepeat.get(dataRepeat.size()-1);
+						int xy[]= postion2XY(pos);
+						if (isAIOpen && whoMove) {//机器人对战模式悔棋移除两颗棋子
+							//移除机器人
+							chessBoard[xy[1]][xy[0]] = 0;
+							dataRepeat.remove(dataRepeat.size()-1);
+							mData.get(pos).who = 0;
+							//移除用户
+							pos = dataRepeat.get(dataRepeat.size()-1);
+							xy = postion2XY(pos);
+							chessBoard[xy[1]][xy[0]] = 0;
+							dataRepeat.remove(dataRepeat.size()-1);
+							mData.get(pos).who = 0;
+						}else {
+							chessBoard[xy[1]][xy[0]] = 0;
+							dataRepeat.remove(dataRepeat.size()-1);
+							mData.get(pos).who = 0;
 						}
-					});
+						
+						if (whoMove || isAIOpen) {
+							textview_notify.setText("请黑方落子");
+							whoMove = true;
+						} else {
+							textview_notify.setText("请白方落子");
+						}
+						adapter.notifyDataSetChanged();
+					}
+				});
 			builder.setNegativeButton("取消",
 					new DialogInterface.OnClickListener() {
 
@@ -220,16 +213,19 @@ public class MainActivity extends Activity implements OnItemClickListener,
 	 */
 	public void repeat(View view) {
 		readData();
-		chessGrid.setEnabled(false);
+		isEnd = true;
+		checkboxAI.setEnabled(false);
+		findViewById(R.id.id_regret).setEnabled(false);
+		findViewById(R.id.id_restart).setEnabled(false);
+		findViewById(R.id.id_repeat).setEnabled(false);
 		adapter.notifyDataSetChanged();
 		isRepeat = true;
-		isRepeatEnd = false;
+		isRepeatEnd = false; 
 		whoMove = true;
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
-				repeatFor: for (int[] xy : repeatData) {
-					int position = xy2Position(xy);
+				repeatFor: for (int position : dataRepeat) {
 					Message msg = handler.obtainMessage();
 					msg.arg1 = position;
 					handler.sendMessage(msg);
@@ -243,6 +239,9 @@ public class MainActivity extends Activity implements OnItemClickListener,
 					}
 				}
 				isRepeatEnd = true;
+				Message msg = handler.obtainMessage();
+				msg.what = 1171;
+				handler.sendMessage(msg);
 			}
 		}).start();
 	}
@@ -250,7 +249,15 @@ public class MainActivity extends Activity implements OnItemClickListener,
 	Handler handler = new Handler() {
 		@Override
 		public void handleMessage(Message msg) {
-			onItemClick(chessGrid, null, msg.arg1, msg.arg1);
+			
+			if (msg.what == 1171) {
+				checkboxAI.setEnabled(true);
+				findViewById(R.id.id_regret).setEnabled(true);
+				findViewById(R.id.id_restart).setEnabled(true);
+				findViewById(R.id.id_repeat).setEnabled(true);
+			}else {
+				onItemClick(chessGrid, null, msg.arg1, msg.arg1);
+			}
 		}
 	};
 
@@ -268,27 +275,28 @@ public class MainActivity extends Activity implements OnItemClickListener,
 	private boolean isValid(Chess chess) {
 		return chess.who == 0;
 	}
-
+	
 	/**
-	 * 判断游戏是否继续
 	 * 
+	 * @param xy
 	 * @return
 	 */
+	//st isContinue
 	public boolean isContinue(int[] xy) {
 		int continuousCount = 1;
-		// 左
-		int x = xy[0];
-		int y = xy[1] - 1;
+		// 上
+		int x = xy[1];
+		int y = xy[0] - 1;
 
-		while (y >= 0 && chessBoard[x][y] == chessBoard[xy[0]][xy[1]]) {
+		while (y >= 0 && chessBoard[x][y] == chessBoard[xy[1]][xy[0]]) {
 			continuousCount++;
 			y--;
 		}
-		// 右
-		x = xy[0];
-		y = xy[1] + 1;
+		// 下
+		x = xy[1];
+		y = xy[0] + 1;
 		while (y < chessBoard[x].length
-				&& chessBoard[x][y] == chessBoard[xy[0]][xy[1]]) {
+				&& chessBoard[x][y] == chessBoard[xy[1]][xy[0]]) {
 			continuousCount++;
 			y++;
 		}
@@ -297,19 +305,19 @@ public class MainActivity extends Activity implements OnItemClickListener,
 			return false;
 		}
 
-		// 上
-		x = xy[0] - 1;
-		y = xy[1];
+		// 左
+		x = xy[1] - 1;
+		y = xy[0];
 		continuousCount = 1;
-		while (x >= 0 && chessBoard[x][y] == chessBoard[xy[0]][xy[1]]) {
+		while (x >= 0 && chessBoard[x][y] == chessBoard[xy[1]][xy[0]]) {
 			continuousCount++;
 			x--;
 		}
-		// 下
-		x = xy[0] + 1;
-		y = xy[1];
+		// 右
+		x = xy[1] + 1;
+		y = xy[0];
 		while (x < chessBoard.length
-				&& chessBoard[x][y] == chessBoard[xy[0]][xy[1]]) {
+				&& chessBoard[x][y] == chessBoard[xy[1]][xy[0]]) {
 			continuousCount++;
 			x++;
 		}
@@ -319,19 +327,19 @@ public class MainActivity extends Activity implements OnItemClickListener,
 		}
 
 		// 左上
-		x = xy[0] - 1;
-		y = xy[1] - 1;
+		x = xy[1] - 1;
+		y = xy[0] - 1;
 		continuousCount = 1;
-		while (x >= 0 && y >= 0 && chessBoard[x][y] == chessBoard[xy[0]][xy[1]]) {
+		while (x >= 0 && y >= 0 && chessBoard[x][y] == chessBoard[xy[1]][xy[0]]) {
 			continuousCount++;
 			x--;
 			y--;
 		}
 		// 右下
-		x = xy[0] + 1;
-		y = xy[1] + 1;
+		x = xy[1] + 1;
+		y = xy[0] + 1;
 		while (x < chessBoard.length && y < chessBoard[x].length
-				&& chessBoard[x][y] == chessBoard[xy[0]][xy[1]]) {
+				&& chessBoard[x][y] == chessBoard[xy[1]][xy[0]]) {
 			continuousCount++;
 			x++;
 			y++;
@@ -341,21 +349,21 @@ public class MainActivity extends Activity implements OnItemClickListener,
 			return false;
 		}
 
-		// 右上
-		x = xy[0] - 1;
-		y = xy[1] + 1;
+		// 左下
+		x = xy[1] - 1;
+		y = xy[0] + 1;
 		continuousCount = 1;
 		while (x >= 0 && y < chessBoard[x].length
-				&& chessBoard[x][y] == chessBoard[xy[0]][xy[1]]) {
+				&& chessBoard[x][y] == chessBoard[xy[1]][xy[0]]) {
 			continuousCount++;
 			x--;
 			y++;
 		}
-		// 左下
-		x = xy[0] + 1;
-		y = xy[1] - 1;
+		// 右上
+		x = xy[1] + 1;
+		y = xy[0] - 1;
 		while (x < chessBoard.length && y >= 0
-				&& chessBoard[x][y] == chessBoard[xy[0]][xy[1]]) {
+				&& chessBoard[x][y] == chessBoard[xy[1]][xy[0]]) {
 			continuousCount++;
 			x++;
 			y--;
@@ -367,6 +375,7 @@ public class MainActivity extends Activity implements OnItemClickListener,
 
 		return true;
 	}
+	//ed isContinue
 
 	/**
 	 * 将position转化为二维坐标
@@ -385,7 +394,7 @@ public class MainActivity extends Activity implements OnItemClickListener,
 	 * 将XY坐标转化为position
 	 */
 	public int xy2Position(int[] xy) {
-		int position = xy[0] * 14 + xy[1];
+		int position = xy[0]  + xy[1]* 14;
 		return position;
 	}
 
@@ -399,26 +408,26 @@ public class MainActivity extends Activity implements OnItemClickListener,
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int pos, long id) {
 		// TODO Auto-generated method stub
-		// TODO Auto-generated method stub
-		int[] clickXY = null;
-		if (whoMove) {
-			clickXY = repeatBlackXY = postion2XY(pos);
-		}else {
-			clickXY = repeatWhiteXY = postion2XY(pos);
-		} 
+		/*if (isEnd && !isRepeat) {
+			Toast toast = Toast.makeText(mContext, "游戏已经结束，重新开一局吧~", Toast.LENGTH_SHORT);
+			toast.setGravity(Gravity.CENTER, 0, 0);
+			toast.show();
+			return;
+		}*/
+		int[] clickXY = postion2XY(pos);
 		if (isValid(mData.get(pos))) {
 
 			if (whoMove) {
 				mData.get(pos).who = 1;
 				// 改变棋盘二维数组的数据
-				chessBoard[clickXY[0]][clickXY[1]] = 1;
+				chessBoard[clickXY[1]][clickXY[0]] = 1;
 			} else {
 				mData.get(pos).who = 2;
 				// 改变棋盘二维数组的数据
-				chessBoard[clickXY[0]][clickXY[1]] = 2;
+				chessBoard[clickXY[1]][clickXY[0]] = 2;
 			}
 			if (!isRepeat) {
-				repeatData.add(clickXY);
+				dataRepeat.add(pos);
 			}
 			whoMove = !whoMove;
 			if (whoMove) {
@@ -471,7 +480,19 @@ public class MainActivity extends Activity implements OnItemClickListener,
      */
     public int doAICalculate(int[] xy){
         //可落子方案集合
-        TreeSet<AIPosition> defenSet = doAIConsider(2, xy);
+        defenSet.addAll(doAIConsider(2, xy));
+        TreeSet<AIPosition> set = new TreeSet<AIPosition>();
+        for(AIPosition aiPosition : defenSet){
+        	xy = postion2XY(aiPosition.position);
+			if (chessBoard[xy[1]][xy[0]]  == 0) {
+				set.add(aiPosition);
+			}
+		}
+        defenSet = returnTopTen(set);
+        Log.e(TAG, "defense system.......................");
+		ArrayList<AIPosition> list = new ArrayList<AIPosition>();
+		list.addAll(defenSet);
+        Log.e(TAG, list.toString());
         if(defenSet != null && defenSet.size() > 0){
 
             //再写一个算法，不是每次都在同等级的Level数值下选择最后一个
@@ -489,36 +510,56 @@ public class MainActivity extends Activity implements OnItemClickListener,
      * @return
      */
     public int filtrateAIPosition(TreeSet<AIPosition> treeSet,int blackxy[]){
-        List<AIPosition> listAIPosition = new ArrayList<AIPosition>();
         for(AIPosition aiPosition : treeSet){
             int[] xy = postion2XY(aiPosition.position);
-            int blankX = xy[0];
-            int blankY = xy[1];
+            int blankX = xy[1];
+            int blankY = xy[0];
             //如果可落子点附近有对方棋子，则优先级+0.1
             float d = isHaveOpponent(1, blankX, blankY);
             aiPosition.level += d;
         }
-        //重新排序递增了优先级的落子方案
-        TreeSet<AIPosition> resultTreeSet = new TreeSet<AIPosition>();
-        //优先防守，进攻机会更好选进攻
-        resultTreeSet.addAll(treeSet);
-
-        if (repeatWhiteXY != null && isAIOpen) {
-            attakSet.addAll(doAIConsider(1, repeatWhiteXY));
-            TreeSet<AIPosition> set = new TreeSet<AIPosition>();
-            
+       Log.e(TAG, "after isHaveOpponent....");
+		ArrayList<AIPosition> list = new ArrayList<AIPosition>();
+		list.addAll(treeSet);
+		treeSet.clear();
+		treeSet.addAll(list);
+		list.clear();
+		list.addAll(treeSet);
+        Log.e(TAG, list.toString());
+        int []xy = null;
+        if (dataRepeat.size() >1) {
+        	xy = postion2XY(dataRepeat.get(dataRepeat.size()-2));
+		}
+        if (xy != null && isAIOpen) {
+            attakSet.addAll(doAIConsider(1, xy));
+            TreeSet<AIPosition> set = new TreeSet<AIPosition>();            
             for(AIPosition aiPosition : attakSet){
-            	int[] xy = postion2XY(aiPosition.position);
-				if (chessBoard[xy[0]][xy[1]]  == 0) {
-					set.add(aiPosition);
+            	xy = postion2XY(aiPosition.position);
+				if (chessBoard[xy[1]][xy[0]]  == 0) {
+					float d = isHaveOpponent(2, xy[1], xy[0]);
+		            aiPosition.level += d;
+					set.add(aiPosition);//取10个点足够
 				}
 			}
-            attakSet = set;
-            resultTreeSet.addAll(attakSet);
+            attakSet.clear();
+            attakSet.addAll(set);
+            attakSet = returnTopTen(attakSet);
+            treeSet.addAll(attakSet);
+            treeSet = returnTopTen(treeSet);
+            Log.e(TAG, "attack system.....");
+    		list = new ArrayList<AIPosition>();
+    		list.addAll(attakSet);
+            Log.e(TAG, list.toString());
+            
 		}
+        Log.e(TAG, "whole system.....");
+		list = new ArrayList<AIPosition>();
+		list.addAll(treeSet);
+        Log.e(TAG, list.toString());
 
-        listAIPosition.addAll(resultTreeSet);
-        return listAIPosition.get(listAIPosition.size() - 1).position;
+        Log.e(TAG, "the best choice.....");
+        Log.e(TAG, treeSet.first().toString());
+        return treeSet.first().position;
     }
 
     /**
@@ -542,7 +583,7 @@ public class MainActivity extends Activity implements OnItemClickListener,
         }
         //根据对方棋子出现次数，增加优先级增量
         switch (displayCount){
-            case 1:
+            /*case 1:
                 return 0.0f;
             case 2:
                 return 0.1f;
@@ -557,7 +598,7 @@ public class MainActivity extends Activity implements OnItemClickListener,
             case 7:
                 return 0.6f;
             case 8:
-                return 0.7f;
+                return 0.7f;*/
             default:
                 return 0.0f;
         }
@@ -570,9 +611,9 @@ public class MainActivity extends Activity implements OnItemClickListener,
      * @return
      */
     public TreeSet<AIPosition> doAIConsider(int who, int[] xy){
-        //按照优先等级进行落子方案的排序
+        //st 变量域
+    	//按照优先等级进行落子方案的排序
         TreeSet<AIPosition> treeSet = new TreeSet<AIPosition>();
-
         //标记该方位是否有空当可落子
         boolean leftBlank = false;
         boolean rightBlank = false;
@@ -587,371 +628,374 @@ public class MainActivity extends Activity implements OnItemClickListener,
         boolean rightTopBlank = false;
 
         Map<String, Integer> map = new HashMap<String, Integer>();
-
-        //左
-        int x = xy[0];
-        int y = xy[1] - 1;
-        int continuousCount = 1;
+        //ed 变量域
+        
+        /**
+         * 根据传入的坐标，四个方向(纵向，横向，撇向，捺向)找出最优位置，即米字格的各个顶点
+         * */
+        
+        //st 传入坐标上方坐标        
+        int x = xy[1];
+        int y = xy[0] - 1;
+        int continuousCount = 1;//优先级
         int blankCount = 0;
         int blankX = -1;
         int blankY = -1;
-
+        int bothSideBlankCount = 0;
+        /*********************纵向BEG*****************************************/
+        //st 纵向
         while(y >= 0){
-            if(chessBoard[x][y] == chessBoard[xy[0]][xy[1]]){
+            if(chessBoard[x][y] == chessBoard[xy[1]][xy[0]]){
                 continuousCount ++;
                 y--;
-            }else if(chessBoard[x][y] == who){
-                //左边已经遇到己方棋子
-                break;
-            }else if(chessBoard[x][y] == 0){
-            	if (blankCount == 1 || y==0) {
-            		if (y==0) {
-            			blankX = x;
-    					blankY = y;
-					}
-	                //左边遇到空棋子
-	                leftBlank = true;
-	                map.put("LEFT", xy2Position(new int[]{blankX, blankY}));
-	                break;
-				}else {
-					blankX = x;
-					blankY = y;
-	                y--;
+                if (blankCount == 1 && y < 0) {
+                	continuousCount ++;//空白棋两边都是对方棋子更加危险
+                	map.put("TOP", xy2Position(new int[]{x, blankY}));
+                	topBlank = true;
+                	break;
 				}
-            	blankCount++;
-            }
-        }
-
-        //右
-        x = xy[0];
-        y = xy[1] + 1;
-        blankCount = 0;
-        blankX = -1;
-        blankY = -1;
-
-        while(y < chessBoard[x].length){
-            if(chessBoard[x][y] == chessBoard[xy[0]][xy[1]]){
-                continuousCount ++;
-                y++;
-            }else if(chessBoard[x][y] == who){
-                //左边已经遇到己方棋子
-                break;
-            }else if(chessBoard[x][y] == 0){
-                if (blankCount == 1 || y == chessBoard[x].length-1) {
-                	if (y == chessBoard[x].length-1) {
-            			blankX = x;
-    					blankY = y;
-					}
-                    //左边遇到空棋子
-                    rightBlank = true;
-                    map.put("RIGHT", xy2Position(new int[]{blankX, blankY}));
-                    break;
-				}else {
-					blankX = x;
-					blankY = y;
-					y++;
-				}
-                blankCount++;
-            }
-        }
-
-        if(leftBlank || rightBlank){
-            AIPosition aiPosition1 = null;
-            AIPosition aiPosition2 = null;
-            //需要算法细化
-            if(leftBlank){
-                aiPosition1 = new AIPosition();
-                aiPosition1.position = map.get("LEFT");
-                aiPosition1.level = continuousCount;
-            }
-            if(rightBlank){
-                aiPosition2 = new AIPosition();
-                aiPosition2.position = map.get("RIGHT");
-                aiPosition2.level = continuousCount;
-            }
-            if(aiPosition1 != null){
-                treeSet.add(aiPosition1);
-            }
-            if(aiPosition2 != null){
-                treeSet.add(aiPosition2);
-            }
-        }
-
-        //上
-        x = xy[0] - 1;
-        y = xy[1];
-        continuousCount = 1;
-        blankCount = 0;
-        blankX = -1;
-        blankY = -1;
-
-        while(x >= 0){
-            if(chessBoard[x][y] == chessBoard[xy[0]][xy[1]]){
-                continuousCount ++;
-                x--;
             }else if(chessBoard[x][y] == who){
                 //上边已经遇到己方棋子
+                if (blankCount == 1) {
+                	map.put("TOP", xy2Position(new int[]{x, blankY}));
+                	topBlank = true;
+                	break;
+				}
                 break;
             }else if(chessBoard[x][y] == 0){
-            	if (blankCount == 1 || x == 0) {
-                	if (x == 0) {
-            			blankX = x;
-    					blankY = y;
-					}
-                    //上边遇到空棋子
-                    topBlank = true;
-                    map.put("TOP", xy2Position(new int[]{blankX, blankY}));
-                    break;
+            	if (blankCount == 1) {
+            		map.put("TOP", xy2Position(new int[]{x, blankY}));
+                	topBlank = true;
+                	break;
 				}else {
-			        blankX = x;
-			        blankY = y;
-			        x--;
+					blankCount++;
+					blankY = y;
 				}
-		        blankCount ++;
+            	
             }
         }
-
-        //下
-        x = xy[0] + 1;
-        y = xy[1];
+        
+        y = xy[0] + 1;//记录传入坐标上面坐标
         blankCount = 0;
-        blankX = -1;
-        blankY = -1;
-
-        while(x < chessBoard.length){
-            if(chessBoard[x][y] == chessBoard[xy[0]][xy[1]]){
+        while(y < chessBoard[x].length){
+            if(chessBoard[x][y] == chessBoard[xy[1]][xy[0]]){
                 continuousCount ++;
-                x++;
+                y++;
+                if (blankCount == 1 && y == chessBoard[x].length) {
+                	continuousCount ++;//空白棋两边都是对方棋子更加危险
+                	map.put("BOTTOM", xy2Position(new int[]{x, blankY}));
+                	bottomBlank = true;
+				}
             }else if(chessBoard[x][y] == who){
                 //下边已经遇到己方棋子
+            	if (blankCount == 1) {
+            		map.put("BOTTOM", xy2Position(new int[]{x, blankY}));
+                	bottomBlank = true;
+				}
                 break;
             }else if(chessBoard[x][y] == 0){
-            	if (blankCount == 1 || x == chessBoard.length-1) {
-                	if (x == chessBoard.length-1) {
-            			blankX = x;
-    					blankY = y;
-					}
-            		//下边遇到空棋子
-                    bottomBlank = true;
-                    map.put("BOTTOM", xy2Position(new int[]{blankX, blankY}));
-                    break;
-				}else {
-			        blankX = x;
-			        blankY = y;
-			        x++;
+            	if (blankCount == 1) {
+            		map.put("BOTTOM", xy2Position(new int[]{x, blankY}));
+                	bottomBlank = true;
+                	break;
+				} else {
+					blankCount++;
+					blankY = y;
 				}
-		        blankCount ++;
+            	
             }
         }
-
-        if(topBlank || bottomBlank){
-            AIPosition aiPosition1 = null;
-            AIPosition aiPosition2 = null;
-            //需要算法细化
-            if(topBlank){
-                aiPosition1 = new AIPosition();
-                aiPosition1.position = map.get("TOP");
-                aiPosition1.level = continuousCount;
-            }
-
-            if(bottomBlank){
-                aiPosition2 = new AIPosition();
-                aiPosition2.position = map.get("BOTTOM");
-                aiPosition2.level = continuousCount;
-            }
-            if(aiPosition1 != null){
-                treeSet.add(aiPosition1);
-            }
-            if(aiPosition2 != null){
-                treeSet.add(aiPosition2);
-            }
+        float level = continuousCount;
+        if (who == 2) {
+        	level += 0.1;
+		}
+        if(topBlank){
+        	AIPosition aiPosition = new AIPosition();
+        	aiPosition.position = (null == map.get("TOP")?0:map.get("TOP"));
+        	aiPosition.level = level;
+            treeSet.add(aiPosition);
         }
 
-        //左上
-        x = xy[0] - 1;
-        y = xy[1] - 1;
+        if(bottomBlank){
+        	AIPosition aiPosition = new AIPosition();
+        	aiPosition.position = (null == map.get("BOTTOM")?0:map.get("BOTTOM"));
+        	aiPosition.level = level;
+            treeSet.add(aiPosition);
+        }
+        //ed 纵向
+        /*********************纵向END*****************************************/
+        
+        x = xy[1] - 1;
+        y = xy[0];
         continuousCount = 1;
         blankCount = 0;
-        blankX = -1;
-        blankY = -1;
+        /*********************横向BEG*****************************************/
+        //st 横向
+        while(x >= 0){
+            if(chessBoard[x][y] == chessBoard[xy[1]][xy[0]]){
+                continuousCount ++;
+                x--;
+            	if (blankCount == 1 && x < 0) {
+                	continuousCount ++;//空白棋两边都是对方棋子更加危险
+            		map.put("LEFT", xy2Position(new int[]{blankX, y}));
+                	leftBlank = true;
+				}
+            }else if(chessBoard[x][y] == who){
+                //上边已经遇到己方棋子
+            	if (blankCount == 1) {
+            		map.put("LEFT", xy2Position(new int[]{blankX, y}));
+                	leftBlank = true;
+				}
+                break;
+            }else if(chessBoard[x][y] == 0){            	
+            	if (blankCount == 1) {
+            		map.put("LEFT", xy2Position(new int[]{blankX, y}));
+                	leftBlank = true;
+                	break;
+				} else {
+					blankCount++;
+					blankX = x;
+				}
+            }
+        }
 
+        x = xy[1] + 1;
+        blankCount = 0;
+        blankX = -1;
+        while(x < chessBoard.length){
+            if(chessBoard[x][y] == chessBoard[xy[1]][xy[0]]){
+                continuousCount ++;
+                x++;
+            	if (blankCount == 1 && x == chessBoard.length) {
+                	continuousCount ++;//空白棋两边都是对方棋子更加危险
+                	map.put("RIGHT", xy2Position(new int[]{blankX, y}));
+                	rightBlank = true;
+                	break;					
+				}
+            }else if(chessBoard[x][y] == who){
+            	if (blankCount == 1) {
+                	map.put("RIGHT", xy2Position(new int[]{blankX, y}));
+                	rightBlank = true;
+                	break;					
+				}
+                //右边已经遇到己方棋子
+                break;
+            }else if(chessBoard[x][y] == 0){
+            	if (blankCount == 1) {
+                	map.put("RIGHT", xy2Position(new int[]{blankX, y}));
+                	rightBlank = true;
+                	break;					
+				} else {
+					blankCount++;
+					blankX = x;
+				}
+            }
+        }
+
+        level = continuousCount;
+        if (who == 2) {
+        	level += 0.1;
+		}
+        if(leftBlank){
+        	AIPosition aiPosition = new AIPosition();
+        	aiPosition.position = (null == map.get("LEFT")?0:map.get("LEFT"));
+        	aiPosition.level = level;
+            treeSet.add(aiPosition);
+        }
+        if(rightBlank){
+        	AIPosition aiPosition = new AIPosition();
+        	aiPosition.position = (null == map.get("RIGHT")?0:map.get("RIGHT"));
+        	aiPosition.level = level;
+            treeSet.add(aiPosition);
+        }
+        //ed 横向
+        /*********************横向END*****************************************/
+        
+        x = xy[1] - 1;
+        y = xy[0] - 1;
+        continuousCount = 1;
+        blankCount = 0;
+        /*********************捺向BEG*****************************************/
+        //st 捺向
         while(x >= 0 && y >= 0){
-            if(chessBoard[x][y] == chessBoard[xy[0]][xy[1]]){
+            if(chessBoard[x][y] == chessBoard[xy[1]][xy[0]]){
                 continuousCount ++;
                 x--;
                 y--;
+            	if (blankCount == 1 && (x < 0 || y <0)) {
+                	continuousCount ++;//空白棋两边都是对方棋子更加危险
+                	map.put("LEFTTOP", xy2Position(new int[]{blankX, blankY}));
+                	leftTopBlank = true;				
+				}
             }else if(chessBoard[x][y] == who){
                 //左上遇到己方棋子
+            	if (blankCount == 1) {
+                	map.put("LEFTTOP", xy2Position(new int[]{blankX, blankY}));
+                	leftTopBlank = true;				
+				}
                 break;
             }else if(chessBoard[x][y] == 0){
-            	if (blankCount == 1 || x==0 || y==0) {
-                	if (x==0 || y==0) {
-            			blankX = x;
-    					blankY = y;
-					}
-                    //左上遇到空棋子
-                    leftTopBlank = true;
-                    map.put("LEFTTOP", xy2Position(new int[]{blankX, blankY}));
-                    break;
-				}else {
-			        blankX = x;
-			        blankY = y;
-			        x--;
-	                y--;
+            	if (blankCount == 1) {
+                	map.put("LEFTTOP", xy2Position(new int[]{blankX, blankY}));
+                	leftTopBlank = true;
+                	break;					
+				} else {
+					blankCount++;
+					blankX = x;
+					blankY = y;
 				}
-		        blankCount ++;
             }
         }
-
-        //右下
-        x = xy[0] + 1;
-        y = xy[1] + 1;
+        
+        x = xy[1] + 1;
+        y = xy[0] + 1;
         blankCount = 0;
-        blankX = -1;
-        blankY = -1;
-
         while(x < chessBoard.length && y < chessBoard[x].length){
-            if(chessBoard[x][y] == chessBoard[xy[0]][xy[1]]){
+            if(chessBoard[x][y] == chessBoard[xy[1]][xy[0]]){
                 continuousCount ++;
                 x++;
-                y++;
-            }else if(chessBoard[x][y] == who){
-                //右下遇到己方棋子
-                break;
-            }else if(chessBoard[x][y] == 0){
-            	if (blankCount == 1 || x == chessBoard.length-1 || y == chessBoard[x].length-1) {
-                	if (x == chessBoard.length-1 || y == chessBoard[x].length-1) {
-            			blankX = x;
-    					blankY = y;
-					}
-                    //右下遇到空棋子
-                    rightBottomBlank = true;
-                    map.put("RIGHTBOTTOM", xy2Position(new int[]{blankX, blankY}));
-                    break;
-				}else {
-			        blankX = x;
-			        blankY = y;
-			        x++;
-	                y++;
+                y++;            	
+            	if (blankCount == 1 && (x ==  chessBoard.length || y == chessBoard[x].length)) {
+                	continuousCount ++;//空白棋两边都是对方棋子更加危险
+            		map.put("RIGHTBOTTOM", xy2Position(new int[]{blankX, blankY}));
+                	rightBottomBlank = true;
+                	break;
 				}
-		        blankCount ++;
+            }else if(chessBoard[x][y] == who){
+                //右下遇到己方棋子            	
+            	if (blankCount == 1) {
+            		map.put("RIGHTBOTTOM", xy2Position(new int[]{blankX, blankY}));
+                	rightBottomBlank = true;
+                	break;
+				}
+                break;
+            }else if(chessBoard[x][y] == 0){            	
+            	if (blankCount == 1) {
+            		map.put("RIGHTBOTTOM", xy2Position(new int[]{blankX, blankY}));
+                	rightBottomBlank = true;
+                	break;
+				} else {
+					blankCount++;
+					blankX = x;
+					blankY = y;
+				}
             }
         }
 
-        if(leftTopBlank || rightBottomBlank){
-            AIPosition aiPosition1 = null;
-            AIPosition aiPosition2 = null;
-            //需要算法细化
-            if(leftTopBlank){
-                aiPosition1 = new AIPosition();
-                aiPosition1.position = map.get("LEFTTOP");
-                aiPosition1.level = continuousCount;
-            }
-            if(rightBottomBlank){
-                aiPosition2 = new AIPosition();
-                aiPosition2.position = map.get("RIGHTBOTTOM");
-                aiPosition2.level = continuousCount;
-            }
-            if(aiPosition1 != null){
-                treeSet.add(aiPosition1);
-            }
-            if(aiPosition2 != null){
-                treeSet.add(aiPosition2);
-            }
+        level = continuousCount;
+        if (who == 2) {
+        	level += 0.1;
+		}
+        if(leftTopBlank){
+            AIPosition aiPosition = new AIPosition();
+            aiPosition.position = (null == map.get("LEFTTOP")?0:map.get("LEFTTOP"));
+            aiPosition.level = level;
+            treeSet.add(aiPosition);
         }
-
-        //左下
-        x = xy[0] + 1;
-        y = xy[1] - 1;
+        
+        if(rightBottomBlank){
+        	AIPosition aiPosition = new AIPosition();
+            aiPosition.position = (null == map.get("RIGHTBOTTOM")?0:map.get("RIGHTBOTTOM"));
+            aiPosition.level = level;
+            treeSet.add(aiPosition);
+        }
+        //ed 捺向
+        /*********************捺向END*****************************************/
+        
+        x = xy[1] + 1;
+        y = xy[0] - 1;
         continuousCount = 1;
         blankCount = 0;
-        blankX = -1;
-        blankY = -1;
-
+        /*********************撇向BEG*****************************************/
+        //st 撇向
         while(x <chessBoard.length && y >= 0){
-            if(chessBoard[x][y] == chessBoard[xy[0]][xy[1]]){
+            if(chessBoard[x][y] == chessBoard[xy[1]][xy[0]]){
                 continuousCount ++;
                 x++;
                 y--;
-            }else if(chessBoard[x][y] == who){
-                //左下遇到己方棋子
-                break;
-            }else if(chessBoard[x][y] == 0){
-            	if (blankCount == 1 || x == chessBoard.length-1 || y == 0) {
-            		if (x == chessBoard.length-1 || y == 0) {
-            			blankX = x;
-    					blankY = y;
-					}
-                    //左下遇到空棋子
-                    leftBottomBlank = true;
-                    map.put("LEFTBOTTOM", xy2Position(new int[]{blankX, blankY}));
-                    break;
-				}else {
-			        blankX = x;
-			        blankY = y;
-			        x++;
-	                y--;
+            	if (blankCount == 1 && (x == chessBoard.length || y < 0)) {
+                	continuousCount ++;//空白棋两边都是对方棋子更加危险
+            		map.put("RIGHTTOP", xy2Position(new int[]{blankX, blankY}));
+                	rightTopBlank = true;
+                	break;			
 				}
-		        blankCount ++;
-            }
-        }
-
-        //右上
-        x = xy[0] - 1;
-        y = xy[1] + 1;
-        blankCount = 0;
-        blankX = -1;
-        blankY = -1;
-
-        while(x >= 0 && y < chessBoard[x].length){
-            if(chessBoard[x][y] == chessBoard[xy[0]][xy[1]]){
-                continuousCount ++;
-                x--;
-                y++;
             }else if(chessBoard[x][y] == who){
                 //右上遇到己方棋子
+            	if (blankCount == 1) {
+            		map.put("RIGHTTOP", xy2Position(new int[]{blankX, blankY}));
+                	rightTopBlank = true;
+                	break;			
+				}
                 break;
             }else if(chessBoard[x][y] == 0){
-            	if (blankCount == 1 || x == 0 || y == chessBoard[x].length-1) {
-            		if (x == 0 || y == chessBoard[x].length-1) {
-            			blankX = x;
-    					blankY = y;
-					}
-                    //右上遇到空棋子
-                    rightTopBlank = true;
-                    map.put("RIGHTTOP", xy2Position(new int[]{blankX, blankY}));
-                    break;
-				}else {
-			        blankX = x;
-			        blankY = y;
-			        x--;
-	                y++;
+            	if (blankCount == 1) {
+            		map.put("RIGHTTOP", xy2Position(new int[]{blankX, blankY}));
+                	rightTopBlank = true;
+                	break;			
+				} else {
+					blankCount++;
+					blankX = x;
+					blankY = y;
 				}
-		        blankCount ++;
+            }
+        }
+        
+        x = xy[1] - 1;
+        y = xy[0] + 1;
+        blankCount = 0;
+        while(x >= 0 && y < chessBoard[x].length){
+            if(chessBoard[x][y] == chessBoard[xy[1]][xy[0]]){
+                continuousCount ++;
+                x--;
+                y++;       	
+            	if (blankCount == 1 && (x < 0 && y == chessBoard[x].length)) {
+                	continuousCount ++;//空白棋两边都是对方棋子更加危险
+            		map.put("LEFTBOTTOM", xy2Position(new int[]{blankX, blankY}));
+                	leftBottomBlank = true;
+                	break;	
+				}
+            }else if(chessBoard[x][y] == who){
+                //右上遇到己方棋子       	
+            	if (blankCount == 1) {
+            		map.put("LEFTBOTTOM", xy2Position(new int[]{blankX, blankY}));
+                	leftBottomBlank = true;
+                	break;	
+				}
+                break;
+            }else if(chessBoard[x][y] == 0){            	
+            	if (blankCount == 1) {
+            		map.put("LEFTBOTTOM", xy2Position(new int[]{blankX, blankY}));
+                	leftBottomBlank = true;
+                	break;	
+				} else {
+					blankCount++;
+					blankX = x;
+					blankY = y;
+				}
             }
         }
 
-        if(leftBottomBlank || rightTopBlank){
-            AIPosition aiPosition1 = null;
-            AIPosition aiPosition2 = null;
-            //需要算法细化
-            if(leftBottomBlank){
-                aiPosition1 = new AIPosition();
-                aiPosition1.position = map.get("LEFTBOTTOM");
-                aiPosition1.level = continuousCount;
-            }
-            if(rightTopBlank){
-                aiPosition2 = new AIPosition();
-                aiPosition2.position = map.get("RIGHTTOP");
-                aiPosition2.level = continuousCount;
-            }
-            if(aiPosition1 != null){
-                treeSet.add(aiPosition1);
-            }
-            if(aiPosition2 != null){
-                treeSet.add(aiPosition2);
-            }
+        level = continuousCount;
+        if (who == 2) {
+        	level += 0.1;
+		}
+        if(leftBottomBlank){
+        	AIPosition aiPosition = new AIPosition();
+            aiPosition.position = (null == map.get("LEFTBOTTOM")?0:map.get("LEFTBOTTOM"));
+            aiPosition.level = level;
+            treeSet.add(aiPosition);
         }
+
+        if(rightTopBlank){
+        	AIPosition aiPosition = new AIPosition();
+            aiPosition.position = (null == map.get("RIGHTTOP")?0:map.get("RIGHTTOP"));
+            aiPosition.level = level;
+            treeSet.add(aiPosition);
+        }
+        //ed 撇向
+        /*********************撇向END*****************************************/
+        
+        
         return treeSet;
     }
 
@@ -985,6 +1029,22 @@ public class MainActivity extends Activity implements OnItemClickListener,
 		case R.id.id_repeat:
 			repeat(v);
 			break;
+		}
+	}
+	
+	/**
+	 * @param set 原数据
+	 * @return 截取数据
+	 * */
+	private TreeSet<AIPosition> returnTopTen(TreeSet<AIPosition> set) {
+		if (set.size() > 10) {
+			ArrayList<AIPosition> list = new ArrayList<AIPosition>();
+			list.addAll(set);
+			set.clear();
+			set.addAll(list.subList(0, 10));
+			return set;
+		}else {
+			return set;
 		}
 	}
 
