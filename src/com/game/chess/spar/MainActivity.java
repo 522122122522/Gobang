@@ -53,6 +53,9 @@ public class MainActivity extends Activity implements OnItemClickListener,
 	/** 数据源 */
 	private ArrayList<Chess> mData = new ArrayList<Chess>();
 	private ArrayList<Integer> dataRepeat = new ArrayList<Integer>();
+	//AI开启后记录每次最佳落子集合，目的在于点击悔棋操作优先级能正常体现
+	private ArrayList<TreeSet<AIPosition>> sets = new ArrayList<TreeSet<AIPosition>>();
+	private ArrayList<TreeSet<AIPosition>> attackSets = new ArrayList<TreeSet<AIPosition>>();
 	private boolean isRepeat = false;
 	private boolean isRepeatEnd = true;
 	private boolean isEnd = false;
@@ -66,7 +69,7 @@ public class MainActivity extends Activity implements OnItemClickListener,
 	private boolean whoMove = true;
 	
 	TreeSet<AIPosition> attakSet = new TreeSet<AIPosition>();//进攻一阵
-	TreeSet<AIPosition> defenSet = new TreeSet<AIPosition>();//一阵
+	TreeSet<AIPosition> set = new TreeSet<AIPosition>();//一阵
 	private final String TAG = "MainActivity";
 
 	@Override
@@ -138,8 +141,10 @@ public class MainActivity extends Activity implements OnItemClickListener,
 		isEnd = false;
 		whoMove = true;
 		attakSet.clear();
-		defenSet.clear();
+		set.clear();
 		dataRepeat.clear();
+		sets.clear();
+		attackSets.clear();
 	}
 
 	/**
@@ -180,6 +185,25 @@ public class MainActivity extends Activity implements OnItemClickListener,
 							chessBoard[xy[1]][xy[0]] = 0;
 							dataRepeat.remove(dataRepeat.size()-1);
 							mData.get(pos).who = 0;
+							if (sets.size() >= 1) {
+								sets.remove(sets.size()-1);
+								if (sets.size() >= 1) {
+									set = sets.get(sets.size()-1);
+								}else {
+									set.clear();
+								}
+
+							}
+							if (attackSets.size() >= 1) {
+								attackSets.remove(attackSets.size()-1);
+								if (attackSets.size() >= 1) {
+									attakSet = attackSets.get(attackSets.size()-1);
+								}else {
+									attakSet.clear();
+								}
+
+							}
+
 						}else {
 							chessBoard[xy[1]][xy[0]] = 0;
 							dataRepeat.remove(dataRepeat.size()-1);
@@ -480,23 +504,23 @@ public class MainActivity extends Activity implements OnItemClickListener,
      */
     public int doAICalculate(int[] xy){
         //可落子方案集合
-        defenSet.addAll(doAIConsider(2, xy));
-        TreeSet<AIPosition> set = new TreeSet<AIPosition>();
-        for(AIPosition aiPosition : defenSet){
+        set.addAll(doAIConsider(2, xy));
+        TreeSet<AIPosition> temps = new TreeSet<AIPosition>();
+        for(AIPosition aiPosition : set){
         	xy = postion2XY(aiPosition.position);
 			if (chessBoard[xy[1]][xy[0]]  == 0) {
-				set.add(aiPosition);
+				temps.add(aiPosition);
 			}
 		}
-        defenSet = returnTopTen(set);
+        set = returnTopTen(temps);
         Log.e(TAG, "defense system.......................");
 		ArrayList<AIPosition> list = new ArrayList<AIPosition>();
-		list.addAll(defenSet);
+		list.addAll(set);
         Log.e(TAG, list.toString());
-        if(defenSet != null && defenSet.size() > 0){
+        if(set != null && set.size() > 0){
 
             //再写一个算法，不是每次都在同等级的Level数值下选择最后一个
-            return filtrateAIPosition(defenSet,xy);
+            return filtrateAIPosition(set,xy);
         }else{
             Toast.makeText(this, "人工智能已无棋可走", Toast.LENGTH_SHORT).show();
             //对方落子点附近无棋可落，默认返回0，
@@ -510,15 +534,14 @@ public class MainActivity extends Activity implements OnItemClickListener,
      * @return
      */
     public int filtrateAIPosition(TreeSet<AIPosition> treeSet,int blackxy[]){
-        for(AIPosition aiPosition : treeSet){
+        /*for(AIPosition aiPosition : treeSet){
             int[] xy = postion2XY(aiPosition.position);
             int blankX = xy[1];
             int blankY = xy[0];
             //如果可落子点附近有对方棋子，则优先级+0.1
             float d = isHaveOpponent(1, blankX, blankY);
             aiPosition.level += d;
-        }
-       Log.e(TAG, "after isHaveOpponent....");
+        }*/
 		ArrayList<AIPosition> list = new ArrayList<AIPosition>();
 		list.addAll(treeSet);
 		treeSet.clear();
@@ -536,14 +559,15 @@ public class MainActivity extends Activity implements OnItemClickListener,
             for(AIPosition aiPosition : attakSet){
             	xy = postion2XY(aiPosition.position);
 				if (chessBoard[xy[1]][xy[0]]  == 0) {
-					float d = isHaveOpponent(2, xy[1], xy[0]);
-		            aiPosition.level += d;
+					/*float d = isHaveOpponent(2, xy[1], xy[0]);
+		            aiPosition.level += d;*/
 					set.add(aiPosition);//取10个点足够
 				}
 			}
             attakSet.clear();
             attakSet.addAll(set);
             attakSet = returnTopTen(attakSet);
+            attackSets.add(attakSet);
             treeSet.addAll(attakSet);
             treeSet = returnTopTen(treeSet);
             Log.e(TAG, "attack system.....");
@@ -559,6 +583,7 @@ public class MainActivity extends Activity implements OnItemClickListener,
 
         Log.e(TAG, "the best choice.....");
         Log.e(TAG, treeSet.first().toString());
+        sets.add(treeSet);
         return treeSet.first().position;
     }
 
@@ -641,7 +666,6 @@ public class MainActivity extends Activity implements OnItemClickListener,
         int blankCount = 0;
         int blankX = -1;
         int blankY = -1;
-        int bothSideBlankCount = 0;
         /*********************纵向BEG*****************************************/
         //st 纵向
         while(y >= 0){
